@@ -1,166 +1,219 @@
-<style>
+<head>
+  <title>Test push-to-talk AI</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdn.webrtc-experiment.com/MediaStreamRecorder.js"></script>
+  <script>
+    function asFormData(file) {
+      var fd = new FormData();
+      fd.append("file", file);
+      return fd;
+    }
+
+    (async () => {
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+        },
+      });
+
+      const mediaRecorder = new MediaRecorder(audioStream);
+      let audioChunks = [];
+
+      function startRecording() {
+        if (mediaRecorder.state === "inactive") {
+          mediaRecorder.start();
+          $(".play-button").removeClass("paused");
+        }
+      }
+
+      function stopRecording() {
+        if (mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+          $(".play-button").toggleClass("paused");
+        }
+      }
+
+      $(".play-button")
+        .on("mousedown touchstart", startRecording)
+        .bind("mouseup mouseleave touchend", stopRecording);
+      $("body")
+        .keydown(function (e) {
+          // Space bar pressed
+          if (e.keyCode === 32) startRecording();
+        })
+        .keyup(function (e) {
+          // Space bar released
+          if (e.keyCode === 32) stopRecording();
+        });
+
+      mediaRecorder.addEventListener("dataavailable", (event) => {
+        audioChunks.push(event.data);
+      });
+
+      mediaRecorder.addEventListener("stop", async () => {
+        fetch("http://localhost:8000/predict", {
+          method: "POST",
+          body: asFormData(new Blob(audioChunks)),
+        })
+          .then((response) => response.json())
+          .then((res) => {
+            console.log(res);
+            document.getElementById(
+              "speech"
+            ).innerHTML = `${res[0][0]} ➤ ${res[0][1]}`;
+            document.getElementById("command").innerHTML = res[1];
+          });
+        audioChunks = [];
+      });
+
+      // const mediaRecorder = new MediaStreamRecorder(audioStream);
+      // mediaRecorder.mimeType = 'audio/wav';
+
+      // let audioChunks = [];
+
+      // $('.play-button').on('mousedown touchstart', function (e) {
+      //     mediaRecorder.start(30000);
+      //     $(this).removeClass("paused");
+      // }).bind('mouseup touchend', function () {
+      //     mediaRecorder.stop();
+      //     $(this).addClass("paused");
+      // });
+
+      // mediaRecorder.ondataavailable = function(blob) {
+      //     fetch('http://localhost:8000/predict', {
+      //         method: 'POST',
+      //         body: asFormData(blob),
+      //     }).then(response => response.json()).then(res => console.log(res))
+      //     audioChunks = [];
+      // };
+    })();
+  </script>
+  <style>
     @import url("https://fonts.googleapis.com/css?family=Roboto:300");
     body {
-        background-color: #c0392b;
-        font-family: 'Roboto', sans-serif;
-        color: #fff;
+      background-color: #c0392b;
+      font-family: "Roboto", sans-serif;
+      color: #fff;
+      margin: 0;
+    }
+
+    .content {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-evenly;
+      align-items: center;
     }
 
     h1 {
-        font-family: 'Roboto', sans-serif;
-        font-weight: 300;
-        font-size: 2.5rem;
-        text-align: center;
-        color: #fff;
+      font-family: "Roboto", sans-serif;
+      font-weight: 300;
+      font-size: 2.5rem;
+      text-align: center;
+      color: #fff;
     }
 
     .play-button {
-        height: 300px;
-        width: 300px;
-        display: block;
-        margin: 60px auto;
-        overflow: hidden;
-        position: relative;
+      cursor: pointer;
+      height: 300px;
+      width: 300px;
+      display: block;
+      margin: 60px auto;
+      overflow: hidden;
+      position: relative;
     }
 
     .left {
-        height: 100%;
-        float: left;
-        background-color: #fff;
-        width: 36%;
-        transition: all 0.25s ease;
-        overflow: hidden;
+      height: 100%;
+      float: left;
+      background-color: #fff;
+      width: 36%;
+      transition: all 0.25s ease;
+      overflow: hidden;
     }
 
     .triangle-1 {
-        -webkit-transform: translate(0, -100%);
-        transform: translate(0, -100%);
+      -webkit-transform: translate(0, -100%);
+      transform: translate(0, -100%);
     }
 
     .triangle-2 {
-        -webkit-transform: translate(0, 100%);
-        transform: translate(0, 100%);
+      -webkit-transform: translate(0, 100%);
+      transform: translate(0, 100%);
     }
 
     .triangle-1,
     .triangle-2 {
-        position: absolute;
-        top: 0;
-        right: 0;
-        background-color: transparent;
-        width: 0;
-        height: 0;
-        border-right: 300px solid #c0392b;
-        border-top: 150px solid transparent;
-        border-bottom: 150px solid transparent;
-        transition: -webkit-transform 0.25s ease;
-        transition: transform 0.25s ease;
-        transition: transform 0.25s ease, -webkit-transform 0.25s ease;
+      position: absolute;
+      top: 0;
+      right: 0;
+      background-color: transparent;
+      width: 0;
+      height: 0;
+      border-right: 300px solid #c0392b;
+      border-top: 150px solid transparent;
+      border-bottom: 150px solid transparent;
+      transition: -webkit-transform 0.25s ease;
+      transition: transform 0.25s ease;
+      transition: transform 0.25s ease, -webkit-transform 0.25s ease;
     }
 
     .right {
-        height: 100%;
-        float: right;
-        width: 36%;
-        background-color: #fff;
-        transition: all 0.25s ease;
+      height: 100%;
+      float: right;
+      width: 36%;
+      background-color: #fff;
+      transition: all 0.25s ease;
     }
 
     .paused .left {
-        width: 50%;
+      width: 50%;
     }
 
     .paused .right {
-        width: 50%;
+      width: 50%;
     }
 
     .paused .triangle-1 {
-        -webkit-transform: translate(0, -50%);
-        transform: translate(0, -50%);
+      -webkit-transform: translate(0, -50%);
+      transform: translate(0, -50%);
     }
 
     .paused .triangle-2 {
-        -webkit-transform: translate(0, 50%);
-        transform: translate(0, 50%);
-    }
-</style>
-
-<h1>Bấm và giữ nút dưới</h1>
-<a class="play-button paused" href="#">
-    <div class="left"></div>
-    <div class="right"></div>
-    <div class="triangle-1"></div>
-    <div class="triangle-2"></div>
-</a>
-<em><h1 id="speech">#giọng nói</h1></em>
-<h1 id="command">#lệnh</h1>
-<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
-<script src="https://cdn.webrtc-experiment.com/MediaStreamRecorder.js"> </script>
-<script>
-    function asFormData(file) {
-        var fd = new FormData();
-        fd.append("file", file);
-        return fd;
+      -webkit-transform: translate(0, 50%);
+      transform: translate(0, 50%);
     }
 
-    (async () => {
-    const audioStream = await navigator.mediaDevices.getUserMedia({ audio: {
-        sampleRate: 16000,
-        channelCount: 1,
-    } })
-   
+    @media screen and (max-height: 800px) {
+      .play-button {
+        height: 200px;
+        width: 200px;
+      }
 
-    const mediaRecorder = new MediaRecorder(audioStream);
-    let audioChunks = [];
-    $('.play-button').on('mousedown touchstart', function (e) {
-        mediaRecorder.start();
-        $(this).toggleClass("paused");
-    }).bind('mouseup mouseleave touchend', function () {
-        if (mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-            $(this).toggleClass("paused");
-        }
-    });
-
-    mediaRecorder.addEventListener("dataavailable", event => {
-        audioChunks.push(event.data);
-    });
-
-    mediaRecorder.addEventListener("stop", async () => {
-        console.log((audioChunks))
-        fetch('http://localhost:8000/predict', {
-            method: 'POST',
-            body: asFormData(new Blob(audioChunks)),
-
-        }).then(response => response.json()).then(res => {
-            console.log(res);
-            document.getElementById("speech").innerHTML = `${res[0][0]} ➤ ${res[0][1]}`;
-            document.getElementById("command").innerHTML = res[1];
-        })
-        audioChunks = [];
-    });
-
-
-    // const mediaRecorder = new MediaStreamRecorder(audioStream);
-    // mediaRecorder.mimeType = 'audio/wav';
-
-    // let audioChunks = [];
-
-
-    // $('.play-button').on('mousedown touchstart', function (e) {
-    //     mediaRecorder.start(30000);
-    //     $(this).removeClass("paused");
-    // }).bind('mouseup touchend', function () {
-    //     mediaRecorder.stop();
-    //     $(this).addClass("paused");
-    // });
-
-    // mediaRecorder.ondataavailable = function(blob) {
-    //     fetch('http://localhost:8000/predict', {
-    //         method: 'POST',
-    //         body: asFormData(blob),
-    //     }).then(response => response.json()).then(res => console.log(res))
-    //     audioChunks = [];
-    // };
-    })();
-</script>
+      .triangle-1,
+      .triangle-2 {
+        border-right: 200px solid #c0392b;
+        border-top: 100px solid transparent;
+        border-bottom: 100px solid transparent;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="content">
+    <h1>Bấm và giữ nút dưới</h1>
+    <div class="play-button paused">
+      <div class="left"></div>
+      <div class="right"></div>
+      <div class="triangle-1"></div>
+      <div class="triangle-2"></div>
+    </div>
+    <div class="text">
+      <em><h1 id="speech">#giọng nói</h1></em>
+      <h1 id="command">#lệnh</h1>
+    </div>
+  </section>
+</body>
