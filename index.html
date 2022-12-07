@@ -63,8 +63,8 @@
             console.log(res);
             document.getElementById(
               "speech"
-            ).innerHTML = `${res[0][0]} ➤ ${res[0][1]}`;
-            document.getElementById("command").innerHTML = res[1];
+            ).innerHTML = `${res["greedySearchResult"]} ➤ ${res["beamSearchResult"]}`;
+            document.getElementById("command").innerHTML = res["command"];
           });
         audioChunks = [];
       });
@@ -117,6 +117,9 @@
     }
 
     .play-button {
+      user-select: none;
+      -webkit-touch-callout: none; /* iOS Safari */
+      -webkit-user-select: none;
       cursor: pointer;
       height: 300px;
       width: 300px;
